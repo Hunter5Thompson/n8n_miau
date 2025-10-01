@@ -1,0 +1,90 @@
+scenario:
+  name: "Operation Herbststurm"
+  description: "Fictional autumn offensive in Central Europe, 1946"
+  duration_turns: 48  # 4 Tage
+  victory_conditions:
+    - type: "territorial"
+      description: "Control Stadt Neustadt"
+      target: {x: 8, y: 5}
+    - type: "attrition"
+      description: "Reduce enemy to <30% strength"
+      threshold: 0.3
+  
+map:
+  size: {x: 15, y: 10}
+  terrain:
+    - {pos: {x: 3, y: 2}, type: "forest", cover: 0.7, movement_cost: 1.5}
+    - {pos: {x: 5, y: 4}, type: "river", cover: 0.0, movement_cost: 999, crossable_at: [{x: 5, y: 5}]}
+    - {pos: {x: 8, y: 5}, type: "town", cover: 0.8, movement_cost: 1.0, name: "Neustadt"}
+    - {pos: {x: 7, y: 5}, type: "road", cover: 0.1, movement_cost: 0.5}
+
+forces:
+  blue:  # Angreifer
+    command_structure:
+      strategic:
+        - id: "GEN_SCHMIDT"
+          name: "General Schmidt"
+          personality: "balanced"
+          units: ["II_CORPS", "III_CORPS"]
+      
+      operational:
+        - id: "COL_MUELLER"
+          name: "Colonel Müller"
+          personality: "cautious"
+          superior: "GEN_SCHMIDT"
+          units: ["1ST_INF_DIV", "2ND_ARMOR_DIV"]
+          parent_unit: "II_CORPS"
+      
+      tactical:
+        - id: "CPT_WEBER"
+          name: "Captain Weber"
+          personality: "aggressive"
+          superior: "COL_MUELLER"
+          units: ["1ST_BATTALION", "2ND_BATTALION"]
+          parent_unit: "1ST_INF_DIV"
+    
+    units:
+      - id: "1ST_BATTALION"
+        type: "infantry"
+        position: {x: 2, y: 2}
+        strength: 1.0
+        morale: 0.85
+        supply: 1.0
+        commander: "CPT_WEBER"
+        equipment:
+          primary_weapon: "rifle"
+          at_capability: 0.3  # Anti-Tank
+          aa_capability: 0.1  # Anti-Air
+          quality: 0.8  # Ausbildung/Ausrüstung
+          
+      - id: "2ND_BATTALION"
+        type: "armor"
+        position: {x: 2, y: 3}
+        strength: 0.9
+        morale: 0.9
+        supply: 0.95
+        commander: "CPT_WEBER"
+        equipment:
+          primary_weapon: "75mm_gun"
+          armor_thickness: 80  # mm
+          mobility: 0.8
+          quality: 0.85
+          ammunition:
+            ap: 60  # Panzer-Granaten
+            he: 40  # Sprenggranaten
+            fuel: 0.95
+
+  red:  # Verteidiger
+    # Analog zu blue
+    
+friction_settings:
+  base_probability: 0.2
+  weather_enabled: true
+  communication_failures: true
+  supply_issues: true
+  civilian_interference: true
+  
+initial_conditions:
+  weather: "clear"
+  time_of_day: "0600"  # Dawn
+  season: "autumn"

@@ -1,0 +1,85 @@
+# Vordefinierte Persönlichkeitsprofile
+
+profiles:
+  aggressive:
+    aggression: 0.8
+    caution: 0.3
+    initiative: 0.7
+    coordination: 0.5
+    description: "Favors bold action, takes risks, less concerned with coordination"
+    decision_modifiers:
+      under_fire: 0.3        # Wird aggressiver
+      unclear_orders: 0.2    # Handelt eigenständig
+      opportunity: 0.4       # Nutzt Gelegenheiten
+      casualties: -0.1       # Leicht entmutigt
+  
+  cautious:
+    aggression: 0.4
+    caution: 0.8
+    initiative: 0.4
+    coordination: 0.7
+    description: "Methodical, waits for clear situation, values coordination"
+    decision_modifiers:
+      under_fire: -0.2       # Wird vorsichtiger
+      unclear_orders: -0.3   # Wartet auf Klärung
+      opportunity: 0.1       # Zögert
+      casualties: -0.3       # Stark beeinflusst
+  
+  balanced:
+    aggression: 0.5
+    caution: 0.5
+    initiative: 0.6
+    coordination: 0.6
+    description: "Balanced approach, adapts to situation"
+    decision_modifiers:
+      under_fire: 0.0
+      unclear_orders: 0.1
+      opportunity: 0.2
+      casualties: -0.2
+  
+  independent:
+    aggression: 0.6
+    caution: 0.5
+    initiative: 0.9
+    coordination: 0.3
+    description: "Highly independent, acts on own assessment, minimal coordination"
+    decision_modifiers:
+      under_fire: 0.1
+      unclear_orders: 0.4    # Liebt Eigenständigkeit
+      opportunity: 0.5
+      casualties: -0.1
+  
+  team_player:
+    aggression: 0.5
+    caution: 0.6
+    initiative: 0.4
+    coordination: 0.9
+    description: "Highly coordinated, waits for team, follows orders closely"
+    decision_modifiers:
+      under_fire: -0.1
+      unclear_orders: -0.4   # Braucht Klarheit
+      opportunity: 0.0       # Wartet auf Abstimmung
+      casualties: -0.2
+
+# Historische Profile (optional)
+historical:
+  rommel:
+    aggression: 0.9
+    caution: 0.4
+    initiative: 0.9
+    coordination: 0.5
+    description: "Aggressive forward commander, leads from front"
+  
+  montgomery:
+    aggression: 0.6
+    caution: 0.8
+    initiative: 0.5
+    coordination: 0.8
+    description: "Methodical planner, overwhelming preparation"
+  
+  patton:
+    aggression: 0.9
+    caution: 0.3
+    initiative: 0.8
+    coordination: 0.6
+    description: "Relentless aggression, speed and shock"
