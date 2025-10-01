@@ -174,13 +174,13 @@ class ScenarioLoader:
             supply=unit_data['supply'],
             commander=unit_data['commander']
         )
-        
+
         # Equipment mit Defaults
         if 'equipment' in unit_data:
             eq = unit_data['equipment']
             unit.equipment_quality = eq.get('quality', 0.8)
             unit.primary_weapon = eq.get('primary_weapon')
-            
+
             if 'ammunition' in eq:
                 unit.ammunition = eq['ammunition']
                 unit.ammunition_quality = 1.0
@@ -188,5 +188,5 @@ class ScenarioLoader:
             # Fallback wenn kein Equipment definiert
             unit.equipment_quality = 0.8
             unit.ammunition_quality = 1.0
-        
+
         return unit

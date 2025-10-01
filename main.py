@@ -1,8 +1,23 @@
 #!/usr/bin/env python3
-"""
-Kriegsspiel - Dec-POMDP Tactical War Game
-"""
+"""Kriegsspiel - Dec-POMDP Tactical War Game"""
+
 import logging
+import sys
+from pathlib import Path
+
+
+def _ensure_src_on_path() -> None:
+    """Allow running the app via ``python main.py`` without installation."""
+
+    project_root = Path(__file__).resolve().parent
+    src_dir = project_root / "src"
+    src_str = str(src_dir)
+    if src_dir.exists() and src_str not in sys.path:
+        sys.path.insert(0, src_str)
+
+
+_ensure_src_on_path()
+
 from kriegsspiel.orchestrator.scenario_loader import ScenarioLoader
 from kriegsspiel.orchestrator.turn_manager import TurnManager
 from kriegsspiel.review.aar_agent import AARAgent
@@ -18,9 +33,7 @@ def setup_logging():
     )
 
 def main():
-    """
-    Hauptfunktion zum Initialisieren und Ausführen der Spielsimulation.
-    """
+    """Hauptfunktion zum Initialisieren und Ausführen der Spielsimulation."""
     setup_logging()
     print("="*60)
     print("KRIEGSSPIEL - Dec-POMDP Prototype")
