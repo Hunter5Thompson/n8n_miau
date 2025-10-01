@@ -2,28 +2,35 @@
 """
 Kriegsspiel - Dec-POMDP Tactical War Game
 """
+import logging
+from kriegsspiel.orchestrator.scenario_loader import ScenarioLoader
+from kriegsspiel.orchestrator.turn_manager import TurnManager
+from kriegsspiel.review.aar_agent import AARAgent
+from kriegsspiel.ui.text_interface import TextInterface
 
-# Annahme: Die Pfade zu den Modulen sind korrekt und im PYTHONPATH
-from src.orchestrator.scenario_loader import ScenarioLoader
-from src.orchestrator.turn_manager import TurnManager
-from src.review.aar_agent import AARAgent
-from src.ui.text_interface import TextInterface
+def setup_logging():
+    """Configures basic logging for the application."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        # filename='kriegsspiel.log', # Uncomment to log to a file
+        # filemode='w'
+    )
 
 def main():
     """
     Hauptfunktion zum Initialisieren und Ausführen der Spielsimulation.
     """
+    setup_logging()
     print("="*60)
     print("KRIEGSSPIEL - Dec-POMDP Prototype")
     print("="*60)
     
-    # KORRIGIERT: Szenario laden
-    # Der ScenarioLoader gibt direkt ein konfiguriertes GameState-Objekt zurück.
-    # Der fehlerhafte Zwischenschritt über 'GameState.from_scenario' wurde entfernt.
+    # Szenario laden
     game_state = ScenarioLoader.load("config/scenarios/operation_herbststurm.yaml")
     
     if not game_state:
-        print("Fehler: Das Szenario konnte nicht geladen werden. Programm wird beendet.")
+        logging.error("Fehler: Das Szenario konnte nicht geladen werden. Programm wird beendet.")
         return
 
     # Initialisierung der Systemkomponenten
@@ -31,11 +38,12 @@ def main():
     aar_agent = AARAgent()
     ui = TextInterface()
     
-    print(f"\nSzenario '{game_state.scenario_name}' geladen. Starte Simulation...")
+    logging.info(f"Szenario '{game_state.scenario_name}' geladen. Starte Simulation...")
     
     # Vollständige Spielschleife (Game Loop)
     while not game_state.is_finished():
         ui.display_turn_header(game_state)
+        ui.display_map(game_state)
         
         # Eine Spielrunde ausführen
         turn_results = turn_manager.execute_turn()
@@ -44,24 +52,29 @@ def main():
         ui.display_results(turn_results)
         
         # Daten für den After-Action Report sammeln
-        aar_agent.record_turn(game_state, turn_results)
+        # Extract metrics from the turn result to pass to the AAR agent
+        metrics = turn_results.phase_details.get('assessment', {}).get('metrics', {})
+        aar_agent.record_turn(game_state.turn -1, turn_results, metrics) # turn is already incremented
         
         # Siegbedingungen prüfen, um die Schleife ggf. vorzeitig zu beenden
         if game_state.check_victory():
+            logging.info("Victory condition met. Ending simulation.")
             break
             
     # Spielende und finaler Bericht
     print("\n" + "="*60)
     print("Simulation beendet.")
-    winner = game_state.get_winner()
-    if winner:
-        print(f"Sieger: {winner.upper()}")
+
+    if game_state.check_victory():
+        print("Ergebnis: Sieg!")
     else:
-        print("Ergebnis: Unentschieden oder Rundenlimit erreicht.")
+        print("Ergebnis: Rundenlimit erreicht.")
+
     print("="*60)
     
-    # Finalen After-Action Report erstellen
-    aar_agent.generate_final_report()
+    # Finalen After-Action Report erstellen und ausgeben
+    final_report = aar_agent.generate_final_report(game_state)
+    print(final_report)
 
 if __name__ == "__main__":
     main()

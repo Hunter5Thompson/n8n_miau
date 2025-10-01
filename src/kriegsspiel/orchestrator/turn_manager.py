@@ -1,21 +1,13 @@
 from typing import List, Dict
 from dataclasses import dataclass
 from kriegsspiel.core.game_state import GameState
-from kriegsspiel.core.types import Rank, Decision
+from kriegsspiel.core.types import Rank, Decision, TurnResult
 from kriegsspiel.agents.base_agent import BaseAgent
 from kriegsspiel.communication.message import MessageQueue
 from kriegsspiel.friction.friction_generator import FrictionGenerator
 from kriegsspiel.combat.combat_resolver import CombatResolver
 from kriegsspiel.intelligence.observation_generator import ObservationGenerator
-
-@dataclass
-class TurnResult:
-    turn_number: int
-    decisions: List[Decision]
-    combat_results: List
-    friction_events: List
-    messages_delivered: List
-    phase_details: Dict
+from kriegsspiel.review.evaluator import Evaluator
 
 class TurnManager:
     """
@@ -31,6 +23,7 @@ class TurnManager:
         self.friction_gen = FrictionGenerator()
         self.combat_resolver = CombatResolver()
         self.observation_gen = ObservationGenerator()
+        self.evaluator = Evaluator()
         
     def execute_turn(self) -> TurnResult:
         """Führt einen kompletten Turn aus"""
@@ -61,9 +54,13 @@ class TurnManager:
         result.combat_results = execution['combat']
         result.phase_details['execution'] = execution
         
-        # Phase 5: Assessment (Friction, Updates)
+        # Phase 5: Assessment (Friction, Updates, Evaluation)
         assessment = self._assessment_phase()
         result.friction_events = assessment['friction']
+
+        # Evaluate the turn's outcome
+        metrics = self.evaluator.evaluate(self.game_state, result)
+        assessment['metrics'] = metrics
         result.phase_details['assessment'] = assessment
         
         # Turn abschließen
