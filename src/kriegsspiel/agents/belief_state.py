@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple
-from ..core.types import Position, UnitType
+from kriegsspiel.core.types import Position, UnitType
 
 @dataclass
 class Observation:

@@ -1,0 +1,1 @@
+# This file makes 'kriegsspiel' a Python package.

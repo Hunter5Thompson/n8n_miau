@@ -1,7 +1,7 @@
 from typing import Dict, List
-from .types import Position
-from .units import Unit
-from ..agents.base_agent import BaseAgent
+from kriegsspiel.core.types import Position
+from kriegsspiel.core.units import Unit
+from kriegsspiel.agents.base_agent import BaseAgent
 
 class GameState:
     """Zentraler Spielzustand"""

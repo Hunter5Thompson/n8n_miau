@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List
-from ..core.types import Rank
+from kriegsspiel.core.types import Rank
 
 @dataclass
 class Message:

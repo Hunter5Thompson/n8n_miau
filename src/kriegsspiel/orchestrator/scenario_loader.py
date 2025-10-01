@@ -1,13 +1,13 @@
 import yaml
 from pathlib import Path
 from typing import Dict
-from ..core.game_state import GameState
-from ..core.types import Position, Terrain
-from ..core.units import Unit, UnitType
-from ..agents.strategic_agent import StrategicAgent
-from ..agents.operational_agent import OperationalAgent
-from ..agents.tactical_agent import TacticalAgent
-from ..agents.personality import Personality, PersonalityProfiles
+from kriegsspiel.core.game_state import GameState
+from kriegsspiel.core.types import Position, Terrain
+from kriegsspiel.core.units import Unit, UnitType
+from kriegsspiel.agents.strategic_agent import StrategicAgent
+from kriegsspiel.agents.operational_agent import OperationalAgent
+from kriegsspiel.agents.tactical_agent import TacticalAgent
+from kriegsspiel.agents.personality import Personality, PersonalityProfiles
 
 class ScenarioLoader:
     """Lädt Szenarien aus YAML"""
@@ -121,7 +121,7 @@ class ScenarioLoader:
     @staticmethod
     def _create_agent(agent_data: Dict, rank_str: str):
         """Erstellt Agent aus YAML-Daten"""
-        from ..core.types import Rank
+        from kriegsspiel.core.types import Rank
         
         rank = {
             'strategic': Rank.STRATEGIC,

@@ -1,6 +1,6 @@
-from .base_agent import BaseAgent
-from .personality import Personality
-from ..core.types import Rank, Decision, Action, Position
+from kriegsspiel.agents.base_agent import BaseAgent
+from kriegsspiel.agents.personality import Personality
+from kriegsspiel.core.types import Rank, Decision, Action, Position
 
 class OperationalAgent(BaseAgent):
     """
