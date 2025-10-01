@@ -1,21 +1,13 @@
 from typing import List, Dict
 from dataclasses import dataclass
 from kriegsspiel.core.game_state import GameState
-from kriegsspiel.core.types import Rank, Decision
+from kriegsspiel.core.types import Rank, Decision, TurnResult
 from kriegsspiel.agents.base_agent import BaseAgent
 from kriegsspiel.communication.message import MessageQueue
 from kriegsspiel.friction.friction_generator import FrictionGenerator
 from kriegsspiel.combat.combat_resolver import CombatResolver
 from kriegsspiel.intelligence.observation_generator import ObservationGenerator
-
-@dataclass
-class TurnResult:
-    turn_number: int
-    decisions: List[Decision]
-    combat_results: List
-    friction_events: List
-    messages_delivered: List
-    phase_details: Dict
+from kriegsspiel.review.evaluator import Evaluator
 
 class TurnManager:
     """
@@ -31,6 +23,7 @@ class TurnManager:
         self.friction_gen = FrictionGenerator()
         self.combat_resolver = CombatResolver()
         self.observation_gen = ObservationGenerator()
+        self.evaluator = Evaluator()
         
     def execute_turn(self) -> TurnResult:
         """Führt einen kompletten Turn aus"""
@@ -61,9 +54,13 @@ class TurnManager:
         result.combat_results = execution['combat']
         result.phase_details['execution'] = execution
         
-        # Phase 5: Assessment (Friction, Updates)
+        # Phase 5: Assessment (Friction, Updates, Evaluation)
         assessment = self._assessment_phase()
         result.friction_events = assessment['friction']
+
+        # Evaluate the turn's outcome
+        metrics = self.evaluator.evaluate(self.game_state, result)
+        assessment['metrics'] = metrics
         result.phase_details['assessment'] = assessment
         
         # Turn abschließen
@@ -186,12 +183,12 @@ class TurnManager:
         for decision in actions_by_type.get('move', []):
             moved = self._execute_movement(decision)
             movements.append(moved)
-        
+
         # 2. Dann Kämpfe
         for decision in actions_by_type.get('attack', []):
             combat = self._execute_combat(decision)
             if combat:
-                combat_results.append(combat)
+                combat_results.extend(combat)
         
         # 3. Aufklärung
         for decision in actions_by_type.get('recon', []):
@@ -237,31 +234,51 @@ class TurnManager:
     
     def _execute_movement(self, decision: Decision) -> Dict:
         """Führt Bewegung aus"""
-        agent = self.game_state.agents[decision.agent_id]
-        
+        agent = self.game_state.agents.get(decision.agent_id)
+        if not agent or not decision.target:
+            return {'success': False, 'unit_results': []}
+
+        unit_results = []
         for unit_id in agent.units_under_command:
-            unit = self.game_state.units[unit_id]
-            
-            if decision.target:
-                # Berechne Bewegungskosten
-                distance = unit.position.distance_to(decision.target)
-                terrain_cost = self._get_movement_cost(unit.position, decision.target)
-                
-                # Kann Einheit das erreichen?
-                max_move = self._get_max_movement(unit)
-                
-                if distance * terrain_cost <= max_move:
-                    old_pos = unit.position
-                    unit.position = decision.target
-                    
-                    return {
-                        'unit': unit_id,
-                        'from': old_pos,
-                        'to': decision.target,
-                        'success': True
-                    }
-        
-        return {'success': False}
+            unit = self.game_state.units.get(unit_id)
+            if not unit:
+                unit_results.append({
+                    'unit': unit_id,
+                    'success': False,
+                    'reason': 'unit_missing'
+                })
+                continue
+
+            distance = unit.position.distance_to(decision.target)
+            terrain_cost = self._get_movement_cost(unit.position, decision.target)
+            max_move = self._get_max_movement(unit)
+            total_cost = distance * terrain_cost
+
+            if total_cost <= max_move:
+                old_pos = unit.position
+                unit.position = decision.target
+                unit_results.append({
+                    'unit': unit_id,
+                    'from': old_pos,
+                    'to': decision.target,
+                    'success': True
+                })
+                self.game_state.log_event(
+                    f"{unit.id} moved from ({old_pos.x},{old_pos.y}) to ({decision.target.x},{decision.target.y})"
+                )
+            else:
+                unit_results.append({
+                    'unit': unit_id,
+                    'success': False,
+                    'reason': 'out_of_range',
+                    'required': total_cost,
+                    'max': max_move
+                })
+
+        return {
+            'success': any(res['success'] for res in unit_results),
+            'unit_results': unit_results
+        }
     
     def _execute_combat(self, decision: Decision) -> Dict:
         """Führt Kampf aus"""
@@ -281,7 +298,7 @@ class TurnManager:
         ]
         
         if not defenders:
-            return None
+            return []
         
         # Kampf für jede Angreifer/Verteidiger-Paarung
         results = []
@@ -432,13 +449,18 @@ class TurnManager:
         return False
     
     def _get_movement_cost(self, from_pos, to_pos) -> float:
+        props = self.game_state.terrain_properties.get(to_pos)
+        if props:
+            return props.get('movement_cost', 1.0)
+
         terrain = self.game_state.terrain.get(to_pos, 'open')
         costs = {
             'open': 1.0,
             'forest': 1.5,
             'hill': 1.3,
             'road': 0.5,
-            'town': 1.0
+            'town': 1.0,
+            'river': 999.0
         }
         return costs.get(terrain, 1.0)
     
@@ -446,13 +468,14 @@ class TurnManager:
         base = {
             'infantry': 2,
             'armor': 4,
-            'recon': 6
-        }[unit.type.value]
-        
+            'recon': 6,
+            'artillery': 1
+        }.get(unit.type.value, 2)
+
         # Modifikatoren
         modifier = getattr(unit, 'movement_modifier', 1.0)
         supply_factor = max(0.5, unit.supply)
-        
+
         return base * modifier * supply_factor
     
     def _is_supplied(self, unit) -> bool:
@@ -472,15 +495,27 @@ class TurnManager:
         return sum(1 for u in self.game_state.units.values() if u.type.value == 'recon')
     
     def _get_supply_status(self) -> Dict:
+        if not self.game_state.units:
+            return {'average': 0.0}
+
         return {
             'average': sum(u.supply for u in self.game_state.units.values()) / len(self.game_state.units)
         }
-    
+
     def _get_morale_status(self) -> Dict:
+        if not self.game_state.units:
+            return {'average': 0.0}
+
         return {
             'average': sum(u.morale for u in self.game_state.units.values()) / len(self.game_state.units)
         }
     
     def _is_friendly_controlled(self, pos, commander_id) -> bool:
-        # Simplified
-        return True
+        friendly_agents = set(self.game_state.get_friendly_agents(commander_id))
+        friendly_agents.add(commander_id)
+
+        for unit in self.game_state.units.values():
+            if unit.position == pos and unit.commander in friendly_agents:
+                return True
+
+        return False

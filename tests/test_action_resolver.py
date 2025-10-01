@@ -38,6 +38,7 @@ class TestActionResolver(unittest.TestCase):
             units_under_command=["1ST_INF_BATTALION"]
         )
         self.game_state.add_agent(self.commander)
+        self.game_state.blue_agents.add(self.commander.id)
 
         # Create a unit for that commander
         self.unit = Unit(
@@ -56,6 +57,9 @@ class TestActionResolver(unittest.TestCase):
         self.river_pos = Position(x=3, y=2)
         self.game_state.terrain_properties[self.forest_pos] = {"type": "forest", "movement_cost": 1.5}
         self.game_state.terrain_properties[self.river_pos] = {"type": "river", "movement_cost": 999}
+
+        # Default enemy commander for attack tests
+        self.enemy_commander_id = "COL_IVANOV"
 
     def test_resolve_valid_move(self):
         """Test resolving a valid MOVE decision to an open field."""
@@ -121,6 +125,87 @@ class TestActionResolver(unittest.TestCase):
         self.assertEqual(len(actions), 1)
         self.assertEqual(actions[0]["unit_id"], "1ST_INF_BATTALION")
         self.assertEqual(actions[0]["to"], self.forest_pos)
+
+    def test_resolve_attack_generates_actions(self):
+        """Attack decisions should translate to attack actions for in-range units."""
+        enemy_position = Position(x=3, y=2)
+        enemy_unit = Unit(
+            id="RED_INF_1",
+            type=UnitType.INFANTRY,
+            position=enemy_position,
+            strength=0.8,
+            morale=0.7,
+            supply=0.9,
+            commander=self.enemy_commander_id,
+        )
+        self.game_state.add_unit(enemy_unit)
+
+        decision = Decision(
+            agent_id="COL_MUELLER",
+            action=Action.ATTACK,
+            target=enemy_position,
+            reasoning="Engage enemy",
+            confidence=0.8,
+        )
+
+        actions = self.resolver.resolve(decision, self.game_state)
+
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]["type"], "attack")
+        self.assertEqual(actions[0]["target"], enemy_position)
+
+    def test_resolve_attack_out_of_range(self):
+        """Units should not attack targets outside their attack range."""
+        distant_target = Position(x=7, y=7)
+        enemy_unit = Unit(
+            id="RED_INF_2",
+            type=UnitType.INFANTRY,
+            position=distant_target,
+            strength=0.8,
+            morale=0.7,
+            supply=0.9,
+            commander=self.enemy_commander_id,
+        )
+        self.game_state.add_unit(enemy_unit)
+
+        decision = Decision(
+            agent_id="COL_MUELLER",
+            action=Action.ATTACK,
+            target=distant_target,
+            reasoning="Engage distant enemy",
+            confidence=0.6,
+        )
+
+        actions = self.resolver.resolve(decision, self.game_state)
+
+        self.assertEqual(len(actions), 0)
+
+    def test_resolve_recon_requires_recon_unit(self):
+        """Recon actions should be generated for recon-capable units within range."""
+        scout = Unit(
+            id="SCOUT_TROOP",
+            type=UnitType.RECON,
+            position=Position(x=1, y=2),
+            strength=1.0,
+            morale=1.0,
+            supply=1.0,
+            commander="COL_MUELLER",
+        )
+        self.game_state.add_unit(scout)
+        self.commander.units_under_command.append(scout.id)
+
+        recon_target = Position(x=3, y=3)
+        decision = Decision(
+            agent_id="COL_MUELLER",
+            action=Action.RECON,
+            target=recon_target,
+            reasoning="Scout ahead",
+            confidence=0.7,
+        )
+
+        actions = self.resolver.resolve(decision, self.game_state)
+
+        self.assertTrue(any(action["unit_id"] == scout.id for action in actions))
 
 if __name__ == '__main__':
     unittest.main()

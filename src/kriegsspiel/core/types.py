@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List, Dict
 
 class Terrain(Enum):
     OPEN = "open"
@@ -53,3 +53,12 @@ class Decision:
     target: Optional[Position]
     reasoning: str
     confidence: float
+
+@dataclass
+class TurnResult:
+    turn_number: int
+    decisions: List[Decision]
+    combat_results: List
+    friction_events: List
+    messages_delivered: List
+    phase_details: Dict
