@@ -38,28 +38,38 @@ class Personality:
         return max(-1.0, min(1.0, base))
 
 class PersonalityLoader:
-    """Lädt Persönlichkeiten aus YAML"""
-    
-    @staticmethod
-    def load_profiles(config_path: str = "config/personality_profiles.yaml") -> Dict:
-        with open(config_path, 'r') as f:
-            data = yaml.safe_load(f)
-        
-        profiles = {}
-        
-        for name, profile_data in data['profiles'].items():
-            profiles[name] = Personality(
-                aggression=profile_data['aggression'],
-                caution=profile_data['caution'],
-                initiative=profile_data['initiative'],
-                coordination=profile_data['coordination'],
-                description=profile_data['description'],
-                decision_modifiers=profile_data.get('decision_modifiers', {})
-            )
-        
-        return profiles
-    
-    @staticmethod
-    def get_profile(name: str) -> Personality:
-        profiles = PersonalityLoader.load_profiles()
-        return profiles.get(name, profiles['balanced'])
+    """Lädt Persönlichkeiten aus YAML und cached sie für wiederholte Zugriffe."""
+
+    _profile_cache: Dict[str, Personality] = {}
+    _cache_path: str = ""
+
+    @classmethod
+    def load_profiles(cls, config_path: str = "config/personality_profiles.yaml") -> Dict[str, Personality]:
+        if not cls._profile_cache or cls._cache_path != config_path:
+            with open(config_path, 'r') as f:
+                data = yaml.safe_load(f)
+
+            cls._profile_cache = {
+                name: Personality(
+                    aggression=profile['aggression'],
+                    caution=profile['caution'],
+                    initiative=profile['initiative'],
+                    coordination=profile['coordination'],
+                    description=profile['description'],
+                    decision_modifiers=profile.get('decision_modifiers', {})
+                )
+                for name, profile in data.get('profiles', {}).items()
+            }
+            cls._cache_path = config_path
+
+        return cls._profile_cache
+
+    @classmethod
+    def get_profile(cls, name: str, config_path: str = "config/personality_profiles.yaml") -> Personality:
+        profiles = cls.load_profiles(config_path)
+        if name in profiles:
+            return profiles[name]
+        # Fallback: balanced Profil oder erstes verfügbares Profil
+        if 'balanced' in profiles:
+            return profiles['balanced']
+        return next(iter(profiles.values())) if profiles else Personality(0.5, 0.5, 0.5, 0.5)
