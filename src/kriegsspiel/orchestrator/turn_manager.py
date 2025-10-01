@@ -1,12 +1,12 @@
 from typing import List, Dict
 from dataclasses import dataclass
-from ..core.game_state import GameState
-from ..core.types import Rank, Decision
-from ..agents.base_agent import BaseAgent
-from ..communication.message import MessageQueue
-from ..friction.friction_generator import FrictionGenerator
-from ..combat.combat_resolver import CombatResolver
-from ..intelligence.observation_generator import ObservationGenerator
+from kriegsspiel.core.game_state import GameState
+from kriegsspiel.core.types import Rank, Decision
+from kriegsspiel.agents.base_agent import BaseAgent
+from kriegsspiel.communication.message import MessageQueue
+from kriegsspiel.friction.friction_generator import FrictionGenerator
+from kriegsspiel.combat.combat_resolver import CombatResolver
+from kriegsspiel.intelligence.observation_generator import ObservationGenerator
 
 @dataclass
 class TurnResult:
@@ -368,8 +368,8 @@ class TurnManager:
     
     # src/orchestrator/turn_manager.py
     def _create_message(self, sender: str, receiver: str, content: str, current_turn: int):
-        from ..communication.message import Message
-        from ..core.types import Rank
+        from kriegsspiel.communication.message import Message
+        from kriegsspiel.core.types import Rank
         
         sender_agent = self.game_state.agents[sender]
         receiver_agent = self.game_state.agents[receiver]

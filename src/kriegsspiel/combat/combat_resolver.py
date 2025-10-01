@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Tuple
-from ..core.types import Position
-from ..core.units import Unit
+from kriegsspiel.core.types import Position
+from kriegsspiel.core.units import Unit
 
 @dataclass
 class CombatResult:

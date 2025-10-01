@@ -1,8 +1,8 @@
 from typing import List, Tuple
-from ..agents.belief_state import Observation
-from ..core.types import Position, UnitType
-from ..agents.base_agent import BaseAgent
-from ..core.game_state import GameState
+from kriegsspiel.agents.belief_state import Observation
+from kriegsspiel.core.types import Position, UnitType
+from kriegsspiel.agents.base_agent import BaseAgent
+from kriegsspiel.core.game_state import GameState
 import random
 
 class ObservationGenerator:

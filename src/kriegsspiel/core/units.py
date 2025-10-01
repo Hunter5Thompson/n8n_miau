@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from .types import UnitType, Position
+from kriegsspiel.core.types import UnitType, Position
 
 @dataclass
 class Unit:

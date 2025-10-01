@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict
-from ..core.types import Rank, Decision
-from .personality import Personality
-from .belief_state import BeliefState
+from kriegsspiel.core.types import Rank, Decision
+from kriegsspiel.agents.personality import Personality
+from kriegsspiel.agents.belief_state import BeliefState
 
 class BaseAgent(ABC):
     def __init__(
