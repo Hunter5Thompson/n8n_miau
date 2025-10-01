@@ -7,7 +7,7 @@ from kriegsspiel.core.units import Unit, UnitType
 from kriegsspiel.agents.strategic_agent import StrategicAgent
 from kriegsspiel.agents.operational_agent import OperationalAgent
 from kriegsspiel.agents.tactical_agent import TacticalAgent
-from kriegsspiel.agents.personality import Personality, PersonalityProfiles
+from kriegsspiel.agents.personality import PersonalityLoader
 
 class ScenarioLoader:
     """Lädt Szenarien aus YAML"""
@@ -52,15 +52,15 @@ class ScenarioLoader:
                 y=terrain_entry['pos']['y']
             )
             terrain_type = terrain_entry['type']
-            
+
             game_state.terrain[pos] = terrain_type
-            
-            # Speichere zusätzliche Terrain-Eigenschaften
-            if 'cover' in terrain_entry:
-                game_state.terrain_properties[pos] = {
-                    'cover': terrain_entry['cover'],
-                    'movement_cost': terrain_entry['movement_cost']
-                }
+
+            props = {k: v for k, v in terrain_entry.items() if k != 'pos'}
+            props.setdefault('type', terrain_type)
+            props.setdefault('cover', 0.0)
+            props.setdefault('movement_cost', 1.0 if terrain_type != 'river' else 999.0)
+
+            game_state.terrain_properties[pos] = props
     
     @staticmethod
     def _load_forces(game_state: GameState, forces_data: Dict):
@@ -92,31 +92,36 @@ class ScenarioLoader:
             agents[agent.id] = agent
             game_state.add_agent(agent)
             side_set.add(agent.id)  # HINZUGEFÜGT
-            
+
             if 'superior' in agent_data:
                 agent.superior = agent_data['superior']
-                agents[agent_data['superior']].subordinates.append(agent.id)
-        
+                superior = agents.get(agent_data['superior'])
+                if superior and agent.id not in superior.subordinates:
+                    superior.subordinates.append(agent.id)
+
         # Tactical level
         for agent_data in agent_hierarchy.get('tactical', []):
             agent = ScenarioLoader._create_agent(agent_data, 'tactical')
             agents[agent.id] = agent
             game_state.add_agent(agent)
             side_set.add(agent.id)  # HINZUGEFÜGT
-            
+
             if 'superior' in agent_data:
                 agent.superior = agent_data['superior']
-                agents[agent_data['superior']].subordinates.append(agent.id)
+                superior = agents.get(agent_data['superior'])
+                if superior and agent.id not in superior.subordinates:
+                    superior.subordinates.append(agent.id)
         
         
         # Lade Einheiten
         for unit_data in side_data['units']:
             unit = ScenarioLoader._create_unit(unit_data)
             game_state.add_unit(unit)
-            
+
             # Verknüpfe mit Commander
-            commander = agents[unit.commander]
-            commander.units_under_command.append(unit.id)
+            commander = agents.get(unit.commander)
+            if commander and unit.id not in commander.units_under_command:
+                commander.units_under_command.append(unit.id)
     
     @staticmethod
     def _create_agent(agent_data: Dict, rank_str: str):
@@ -131,7 +136,7 @@ class ScenarioLoader:
         
         # Personality
         personality_name = agent_data.get('personality', 'balanced')
-        personality = getattr(PersonalityProfiles, personality_name.upper())
+        personality = PersonalityLoader.get_profile(personality_name)
         
         # Erstelle richtigen Agent-Type
         if rank == Rank.STRATEGIC:
@@ -169,13 +174,13 @@ class ScenarioLoader:
             supply=unit_data['supply'],
             commander=unit_data['commander']
         )
-        
+
         # Equipment mit Defaults
         if 'equipment' in unit_data:
             eq = unit_data['equipment']
             unit.equipment_quality = eq.get('quality', 0.8)
             unit.primary_weapon = eq.get('primary_weapon')
-            
+
             if 'ammunition' in eq:
                 unit.ammunition = eq['ammunition']
                 unit.ammunition_quality = 1.0
@@ -183,5 +188,5 @@ class ScenarioLoader:
             # Fallback wenn kein Equipment definiert
             unit.equipment_quality = 0.8
             unit.ammunition_quality = 1.0
-        
+
         return unit
